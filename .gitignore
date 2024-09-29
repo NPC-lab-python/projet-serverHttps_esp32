@@ -1,0 +1,8 @@
+ 
+# Ignore les dossiers de build
+/build
+
+# Ignore les fichiers de configuration de l'éditeur
+.vscode/
+.idea/
+.devcontainer/

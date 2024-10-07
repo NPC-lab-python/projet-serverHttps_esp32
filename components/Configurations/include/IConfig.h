@@ -1,3 +1,4 @@
+#include <string>
 #ifndef ICONFIG_H
 #define ICONFIG_H
 
@@ -40,5 +41,12 @@ public:
 
     virtual const char* getSetter() const = 0;
     virtual const char* getReponses() const = 0;
+
+
+    virtual std::string getHostname() const = 0;
+    virtual std::string getUsername() const = 0;
+    virtual std::string getPassword() const = 0;
+    virtual std::string getClientID() const = 0;
+    virtual std::string getTestamentTopic() const = 0;
 };
 #endif // ICONFIG_H

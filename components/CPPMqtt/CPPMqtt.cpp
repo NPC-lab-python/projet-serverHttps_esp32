@@ -33,6 +33,14 @@ void MqttGeneral::SetCredentials(const char *hostname, const char *username,
         .session = {.last_will = {.topic = testament_topic, .msg = "false"}, .keepalive = 10, .protocol_ver = MQTT_PROTOCOL_V_3_1},
         .network = {.reconnect_timeout_ms = 5000}};
     esp_mqtt_set_config(client, &new_mqtt_cfg_client);
+
+       // Mise à jour de la configuration existante
+    esp_err_t err = esp_mqtt_set_config(MqttGeneral::client, &new_mqtt_cfg_client);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Erreur lors de la mise à jour de la configuration MQTT avec SetCredentials (%s)", esp_err_to_name(err));
+    } else {
+        ESP_LOGI(TAG, "Configuration MQTT mise à jour avec succès par SetCredentials");
+    }
 }
 Config GlobalConfig_topic;
 Config& MqttGeneral::Config_topic = GlobalConfig_topic;

@@ -57,3 +57,44 @@ ConfigTmaze::ConfigTmaze(const char *c, const char *PServoRight,
                 meta_ServoLeft(mServoLeft),meta_BeamRight(mBeamRight),
                 meta_BeamLeft(mBeamLeft),ServoRight(SRight),ServoLeft(SLeft),
                 BeamRight(BRight),BeamLeft(BLeft),setter(s), reponses(r) {}
+
+std::string ConfigTmaze::getHostname() const {
+    return this->hostname;
+}
+
+std::string ConfigTmaze::getUsername() const {
+    return this->username;
+}
+
+std::string ConfigTmaze::getPassword() const {
+    return this->password;
+}
+
+std::string ConfigTmaze::getClientID() const {
+    return this->client_id;
+}
+
+std::string ConfigTmaze::getTestamentTopic() const {
+    return this->testament_topic;
+}
+
+// Implémentation des setters
+void ConfigTmaze::setHostname(const std::string& hostname) {
+    this->hostname = hostname;
+}
+
+void ConfigTmaze::setUsername(const std::string& username) {
+    this->username = username;
+}
+
+void ConfigTmaze::setPassword(const std::string& password) {
+    this->password = password;
+}
+
+void ConfigTmaze::setClientID(const std::string& client_id) {
+    this->client_id = client_id;
+}
+
+void ConfigTmaze::setTestamentTopic(const std::string& testament_topic) {
+    this->testament_topic = testament_topic;
+}

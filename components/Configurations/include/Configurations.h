@@ -63,6 +63,13 @@ private:
     const char *setter;
     const char *reponses;
 
+    std::string hostname;
+    std::string username;
+    std::string password;
+    std::string client_id;
+    std::string testament_topic;
+    
+
 public:
     // Constructeur avec initialisation de membres
     ConfigTmaze(const char *c, const char *PServoRight, 
@@ -94,5 +101,20 @@ public:
 
     const char *getSetter() const override { return setter; }
     const char *getReponses() const override { return reponses; }
+
+    
+    std::string getHostname() const override;
+    std::string getUsername() const override;
+    std::string getPassword() const override;
+    std::string getClientID() const override;
+    std::string getTestamentTopic() const override;
+
+    // Setters pour chaque attribut
+    void setHostname(const std::string& hostname);
+    void setUsername(const std::string& username);
+    void setPassword(const std::string& password);
+    void setClientID(const std::string& client_id);
+    void setTestamentTopic(const std::string& testament_topic);
+
 };
 #endif // CONFIGURATIONS_H

@@ -1,5 +1,5 @@
 // main/main.cpp
-
+#include "esp_mac.h"
 #include "WifiCpp.h"
 #include "CPPMqtt.h"
 #include "ControlMotor.h"
@@ -55,17 +55,7 @@ void load_mqtt_credentials(char* hostname, size_t hostname_size,
         if (res != ESP_OK) {
             ESP_LOGW(TAG, "Clé 'hostname' non trouvée (%s)", esp_err_to_name(res));
         } else {
-            // Vérifier si le hostname contient un schéma
-            if (strncmp(hostname, "mqtt://", 7) != 0 && strncmp(hostname, "mqtts://", 8) != 0 &&
-                strncmp(hostname, "ws://", 5) != 0 && strncmp(hostname, "wss://", 6) != 0) {
-                // Ajouter "mqtt://" par défaut
-                char corrected_hostname[256]; // Taille maximale pour le hostname corrigé
-                snprintf(corrected_hostname, sizeof(corrected_hostname), "mqtt://%s", hostname);
-                // Copier le hostname corrigé dans la variable hostname
-                strncpy(hostname, corrected_hostname, hostname_size);
-                hostname[hostname_size - 1] = '\0'; // S'assurer que la chaîne est terminée par un caractère nul
-                ESP_LOGI(TAG, "Schéma ajouté au hostname : %s", hostname);
-            }
+                        ESP_LOGW(TAG, "Clé 'hostname' dans le nvs : (%s)", hostname);
         }
 
         // Charger les autres paramètres
@@ -100,16 +90,52 @@ void mqtt_update_callback(const std::map<std::string, std::string>& params) {
     std::string client_id = params.at("client_id");
     std::string testament_topic = params.at("testament_topic");
 
-    if (mymqtt != nullptr) {
-        mymqtt->SetCredentials(
-            hostname.c_str(),
-            username.c_str(),
-            client_id.c_str(),
-            testament_topic.c_str(),
-            password.c_str()
-        );
+    ESP_LOGW(TAG, "Mise à jour des paramètres MQTT : ");
+    ESP_LOGW(TAG, "Clé 'hostname' : (%s)", hostname.c_str());
+    ESP_LOGW(TAG, "Clé 'username' : (%s)", username.c_str());
+    ESP_LOGW(TAG, "Clé 'password' : (%s)", password.c_str());
+    ESP_LOGW(TAG, "Clé 'client_id' : (%s)", client_id.c_str());
+    ESP_LOGW(TAG, "Clé 'testament_topic' : (%s)", testament_topic.c_str());
 
-        // Enregistrer les paramètres dans la NVS
+    if (mymqtt != nullptr) {
+        // Mettre à jour directement la configuration MQTT
+        esp_mqtt_client_config_t new_mqtt_cfg_client = {
+            .broker = {
+                .address = {
+                    .hostname = hostname.c_str(),
+                    .transport = MQTT_TRANSPORT_OVER_TCP, // Choisissez MQTT_TRANSPORT_OVER_SSL pour un broker sécurisé
+                    .port = 1883  // Changez ce port si nécessaire (1883 pour MQTT, 8883 pour MQTTs)
+                }
+            },
+            .credentials = {
+                .username = username.c_str(),
+                .client_id = client_id.c_str(),
+                .authentication = {
+                    .password = password.c_str()
+                }
+            },
+            .session = {
+                .last_will = {
+                    .topic = testament_topic.c_str(),
+                    .msg = "false"
+                },
+                .keepalive = 10,
+                .protocol_ver = MQTT_PROTOCOL_V_3_1
+            },
+            .network = {
+                .reconnect_timeout_ms = 5000
+            }
+        };
+
+        // Appliquer la nouvelle configuration avec esp_mqtt_set_config()
+        esp_err_t err = esp_mqtt_set_config(MqttGeneral::client, &new_mqtt_cfg_client);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Erreur lors de la mise à jour de la configuration MQTT (%s)", esp_err_to_name(err));
+        } else {
+            ESP_LOGI(TAG, "Configuration MQTT mise à jour avec succès");
+        }
+
+        // Enregistrer les nouveaux paramètres dans la NVS
         save_mqtt_credentials(
             hostname.c_str(),
             username.c_str(),
@@ -117,16 +143,16 @@ void mqtt_update_callback(const std::map<std::string, std::string>& params) {
             client_id.c_str(),
             testament_topic.c_str()
         );
-
-        // Redémarrer le client MQTT avec les nouveaux paramètres
+    }
+    // Redémarrer le client MQTT avec les nouveaux paramètres
         esp_mqtt_client_stop(MqttGeneral::client);
-        esp_mqtt_client_destroy(MqttGeneral::client);
+        // esp_mqtt_client_destroy(MqttGeneral::client);
 
         // Réinitialiser le client MQTT avec les nouveaux paramètres
-        MqttGeneral::client = esp_mqtt_client_init(&MqttGeneral::mqtt_cfg_client);
+        // MqttGeneral::client = esp_mqtt_client_init(&MqttGeneral::mqtt_cfg_client);
         mymqtt->mqtt_app_start();
-    }
 }
+
 
 extern "C" void app_main(void) {
     // Initialisation de la NVS
@@ -147,7 +173,7 @@ extern "C" void app_main(void) {
     std::string clientIDmqtt;
     std::string testament;
     std::string passmqtt;
-    std::string iphostmqtt;
+    // std::string hostname;
 
     switch (valconfig)
     {
@@ -166,7 +192,7 @@ extern "C" void app_main(void) {
         clientIDmqtt = "3cfeeders_01";
         testament = "3c/01/F01/$connected";
         passmqtt = "3cfeeders1";
-        iphostmqtt = "10.0.0.99";
+        // hostname = "10.0.0.99";
 
         break;
     case 2:
@@ -188,13 +214,19 @@ extern "C" void app_main(void) {
                                "1");
         ESP_LOGI(TAG, "ConfigTmaze initialized");
 
-        nameHost = "souris_city";
-        usernamemqtt = "souris_city";
-        clientIDmqtt = "souris_city";
-        testament = "souris_city/01/SC01T01/$connected";
-        passmqtt = "souris_city";
+        configTm.setHostname("10.0.0.99");
+        configTm.setUsername("souris_city");
+        configTm.setPassword("password123");
+        configTm.setClientID("souris_city_client");
+        configTm.setTestamentTopic("souris_city/01/SC01T01/$connected");
+
+        // nameHost = "souris_city";
+        // usernamemqtt = "souris_city";
+        // clientIDmqtt = "souris_city";
+        // testament = "souris_city/01/SC01T01/$connected";
+        // passmqtt = "souris_city";
         // iphostmqtt = "192.168.137.1";
-        iphostmqtt = "10.0.0.99";
+        // hostname = "10.0.0.99";
 
         break;
     default:
@@ -223,16 +255,16 @@ extern "C" void app_main(void) {
     char client_id[32] = "";
     char testament_topic[64] = "";
 
-    // load_mqtt_credentials(hostname, sizeof(hostname), username, sizeof(username), password, sizeof(password), client_id, sizeof(client_id), testament_topic, sizeof(testament_topic));
+    load_mqtt_credentials(hostname, sizeof(hostname), username, sizeof(username), password, sizeof(password), client_id, sizeof(client_id), testament_topic, sizeof(testament_topic));
 
-    // Si les paramètres sont vides, utiliser les valeurs par défaut ou celles de la configuration
-    if (strlen(hostname) == 0) {
-        strcpy(hostname, iphostmqtt.c_str());
-        strcpy(username, usernamemqtt.c_str());
-        strcpy(password, passmqtt.c_str());
-        strcpy(client_id, clientIDmqtt.c_str());
-        strcpy(testament_topic, testament.c_str());
-    }
+    // // Si les paramètres sont vides, utiliser les valeurs par défaut ou celles de la configuration
+    // if (strlen(configTm.getHostname().c_str()) == 0) {
+    //     strcpy(const_cast<char*>(hostname.c_str()), configTm.getHostname().c_str());
+    //     strcpy(username, usernamemqtt.c_str());
+    //     strcpy(password, passmqtt.c_str());
+    //     strcpy(client_id, clientIDmqtt.c_str());
+    //     strcpy(testament_topic, testament.c_str());
+    // }
 
     // ---- MQTT
 
@@ -259,7 +291,8 @@ extern "C" void app_main(void) {
     if (mymqtt != nullptr)
     {
         mymqtt->setMotorTaskHandles(moteur1TaskHandle, moteur2TaskHandle);
-        mymqtt->SetCredentials(hostname, username, client_id, testament_topic, password);
+        mymqtt->SetCredentials(configTm.getHostname().c_str(), configTm.getUsername().c_str(), 
+                                configTm.getClientID().c_str(), configTm.getTestamentTopic().c_str(),configTm.getPassword().c_str());
         mymqtt->startTask("MqttThread", 8192, 4);
         mymqtt->startTaskcapteursRight("mqttThreadCapteurRight", 2048, 5);
         mymqtt->startTaskcapteursLeft("mqttThreadCapteurLeft", 2048, 5);
